@@ -75,10 +75,11 @@ def read_json(pipe):
     for file in out['files']:
         path = file.keys()[0]
         size = file[path]
-        print "Reading file %s size %d" % (path, size)
         if size == -1:
+            print "Creating directory %s" % path
             os.makedirs(path)
         else:
+            print "Reading file %s size %d" % (path, size)
             f = open(path, 'w')
             bytes = pipe.read(size)
             f.write(bytes)
@@ -87,6 +88,7 @@ def read_json(pipe):
 import sys
 if len(sys.argv) > 1:
     import os.path
+    print "Waiting for a receiver to run portal to receive the data"
     fifo = make_fifo('w')
     json = create_json(sys.argv[1:])
     send(fifo, json)
@@ -98,6 +100,7 @@ if len(sys.argv) > 1:
             send(fifo, bytes)
     fifo.close()
 else:
+    print "Receiving data from a portal sender"
     fifo = make_fifo('r')
     json = read_json(fifo)
     fifo.close()
