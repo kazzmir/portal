@@ -85,19 +85,29 @@ def read_json(pipe):
             f.write(bytes)
             f.close()
 
+def send_json(fifo, json_data):
+    import json
+    send(fifo, json_data)
+    fifo.write(bytearray([magic_delimiter]))
+
+    data = json.JSONDecoder().decode(json_data)
+
+    for file in data['files']:
+        path = file.keys()[0]
+        size = file[path]
+        print "Sending %s" % path
+        if os.path.isfile(path):
+            bytes = bytearray(read_file(path))
+            send(fifo, bytes)
+
 import sys
 if len(sys.argv) > 1:
     import os.path
     print "Waiting for a receiver to run portal to receive the data"
     fifo = make_fifo('w')
     json = create_json(sys.argv[1:])
-    send(fifo, json)
-    fifo.write(bytearray([magic_delimiter]))
-    for path in sys.argv[1:]:
-        print "Sending %s" % path
-        if os.path.isfile(path):
-            bytes = bytearray(read_file(path))
-            send(fifo, bytes)
+    send_json(fifo, json)
+    
     fifo.close()
 else:
     print "Receiving data from a portal sender"
