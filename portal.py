@@ -14,10 +14,25 @@ def size(path):
     import os
     return os.stat(path).st_size
 
-def create_json(files):
+def create_json(paths):
     import json
+    import os.path
 
-    data = {'files': [{filename(v): size(v)} for v in files]}
+    files = []
+
+    for v in paths:
+        if os.path.isdir(v):
+            for root, dirs, filenames in os.walk(v):
+                for dir in dirs:
+                    files.append({os.path.join(root, dir): -1})
+                for file in filenames:
+                    full = os.path.join(root, file)
+                    files.append({full: size(full)})
+        else:
+            files.append({filename(v): size(v)})
+
+    # data = {'files': [{filename(v): size(v)} for v in paths]}
+    data = {'files': files}
     out = json.JSONEncoder().encode(data)
     # print out
 
@@ -53,6 +68,7 @@ def read_json(pipe):
     text = read_json_data(pipe)
     # print text
     import json
+    import os
     decoder = json.JSONDecoder()
     out, ignore = decoder.raw_decode(text)
     # print "Read json " + str(out)
@@ -60,21 +76,26 @@ def read_json(pipe):
         path = file.keys()[0]
         size = file[path]
         print "Reading file %s size %d" % (path, size)
-        f = open(path, 'w')
-        bytes = pipe.read(size)
-        f.write(bytes)
-        f.close()
+        if size == -1:
+            os.makedirs(path)
+        else:
+            f = open(path, 'w')
+            bytes = pipe.read(size)
+            f.write(bytes)
+            f.close()
 
 import sys
 if len(sys.argv) > 1:
+    import os.path
     fifo = make_fifo('w')
     json = create_json(sys.argv[1:])
     send(fifo, json)
     fifo.write(bytearray([magic_delimiter]))
     for path in sys.argv[1:]:
         print "Sending %s" % path
-        bytes = bytearray(read_file(path))
-        send(fifo, bytes)
+        if os.path.isfile(path):
+            bytes = bytearray(read_file(path))
+            send(fifo, bytes)
     fifo.close()
 else:
     fifo = make_fifo('r')
