@@ -48,3 +48,18 @@ An alternative method is to copy the source file to /, then move it to the desti
 	$ mv /file1 .
 
 Its easier to use portal.py because the receiver doesnt have to retype the filenames again.
+
+Another option is to use tar.
+
+# Sender
+	$ mkfifo /tmp/fifo
+	$ tar -c file1 file2 > /tmp/fifo
+# Receiver
+	$ tar -xf /tmp/fifo
+	$ ls
+	file1 file2
+
+tar is more powerful in that it can handle ACL's, and has many more options. tar does not strip the directory path from its arguments so given an invocation of tar as
+	$ tar -c /home/me/tmp/x
+
+The untarred output will create home/me/tmp/x instead of just a file called 'x'. The -C parameter helps with this by allowing you to change the working directory for tar to /home/me/tmp, but this is an extra step and will not work for multiple files in different directories.
