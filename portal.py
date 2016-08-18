@@ -17,6 +17,20 @@ def size(path):
     import os
     return os.stat(path).st_size
 
+def check_file_ok(path):
+    import os
+    import os.path
+    if not os.path.exists(path):
+        print "%s does not exist" % path
+        return False
+    if not os.path.isfile(path):
+        print "%s is not a file" % path
+        return False
+    if not os.access(path, os.R_OK):
+        print "Cannot read %s" % path
+        return False
+    return True
+
 def create_json(paths):
     import json
     import os.path
@@ -32,11 +46,16 @@ def create_json(paths):
                     files.append({path: -1})
                 for file in filenames:
                     full = os.path.join(root, file)
-                    files.append({full: size(full)})
+                    if check_file_ok(full):
+                        files.append({full: size(full)})
             group['files'] = files
             all.append({'group': group})
         else:
-            all.append({v: size(v)})
+            if check_file_ok(v):
+                all.append({v: size(v)})
+
+    if len(all) == 0:
+        raise Exception("No files sent")
 
     # data = {'files': [{filename(v): size(v)} for v in paths]}
     data = {'files': all}
