@@ -37,6 +37,7 @@ def create_json(paths):
 
     all = []
     for v in paths:
+        v = v.rstrip('/')
         if os.path.isdir(v):
             group = {'dir': v}
             files = []
@@ -121,6 +122,7 @@ def read_json(pipe):
         if 'group' in file:
             base = file['group']['dir']
             prefix = filename(base)
+            read_json_file(pipe, prefix, -1)
             for subfile in file['group']['files']:
                 path = subfile.keys()[0]
                 size = subfile[path]
