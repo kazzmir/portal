@@ -8,6 +8,7 @@ magic_delimiter = 0x7
 
 # Higher values of debug output more information
 debug = [0]
+version = ["1.0"]
 
 def filename(path):
     import os.path
@@ -35,11 +36,21 @@ def create_json(options):
     import json
     import os.path
 
+    # Filter paths based on file expansion in the include/exclude options.
+    # If it matches an include pattern then include it always
+    # If it matches an exclude pattern then exclude it always
+    # Otherwise include it
     def path_ok(path):
         import fnmatch
-        if options.filter is None:
-            return True
-        return fnmatch.fnmatch(path, options.filter)
+        if options.filter_include:
+            for include in options.filter_include:
+                if not fnmatch.fnmatch(path, include):
+                    return False
+        if options.filter_exclude:
+            for exclude in options.filter_exclude:
+                if fnmatch.fnmatch(path, exclude):
+                    return False
+        return True
 
     paths = options.args
 
@@ -167,7 +178,17 @@ class Options:
     def __init__(self):
         self.args = []
         self.debug = 0
-        self.filter = None
+        self.filter_include = []
+        self.filter_exclude = []
+
+def show_help():
+    print "portal %s" % version[0]
+    print " Sends files over a fifo on the local system. Another invocation of portal on the same system will read the files."
+    print "Usage: portal [options] [files/directories ...]"
+    print " -h: show help"
+    print " -d --debug: Increase debug level"
+    print " --include <pattern>: Include files that match the given pattern, example *.txt. Multiple --include options can be given"
+    print " --exclude <pattern>: Exclude files that match the given pattern. Muliple --exclude options can be given"
 
 def process_args(args):
     options = Options()
@@ -179,9 +200,17 @@ def process_args(args):
             continue
         if arg == '-d' or arg == '--debug':
             options.debug += 1
-        elif arg == '--filter':
+        elif arg == "-h":
+            show_help()
+            import sys
+            sys.exit(0)
+        elif arg == '--include':
             def filter_arg(f):
-                options.filter = f
+                options.filter_include.append(f)
+            skip.append(filter_arg)
+        elif arg == '--exclude':
+            def filter_arg(f):
+                options.filter_exclude.append(f)
             skip.append(filter_arg)
         else:
             options.args.append(arg)
