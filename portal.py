@@ -31,9 +31,17 @@ def check_file_ok(path):
         return False
     return True
 
-def create_json(paths):
+def create_json(options):
     import json
     import os.path
+
+    def path_ok(path):
+        import fnmatch
+        if options.filter is None:
+            return True
+        return fnmatch.fnmatch(path, options.filter)
+
+    paths = options.args
 
     all = []
     for v in paths:
@@ -47,12 +55,12 @@ def create_json(paths):
                     files.append({path: -1})
                 for file in filenames:
                     full = os.path.join(root, file)
-                    if check_file_ok(full):
+                    if path_ok(full) and check_file_ok(full):
                         files.append({full: size(full)})
             group['files'] = files
             all.append({'group': group})
         else:
-            if check_file_ok(v):
+            if path_ok(v) and check_file_ok(v):
                 all.append({v: size(v)})
 
     if len(all) == 0:
@@ -155,20 +163,37 @@ def send_json(fifo, json_data):
         else:
             send_file(fifo, file)
 
+class Options:
+    def __init__(self):
+        self.args = []
+        self.debug = 0
+        self.filter = None
+
 def process_args(args):
-    out = []
+    options = Options()
+    skip = []
     for arg in args:
+        if skip:
+            last = skip.pop()
+            last(arg)
+            continue
         if arg == '-d' or arg == '--debug':
-            debug[0] += 1
+            options.debug += 1
+        elif arg == '--filter':
+            def filter_arg(f):
+                options.filter = f
+            skip.append(filter_arg)
         else:
-            out.append(arg)
-    return out
+            options.args.append(arg)
+    return options
 
 import sys
-args = process_args(sys.argv[1:])
+options = process_args(sys.argv[1:])
+debug[0] = options.debug
+args = options.args
 if len(args) >= 1:
     import os.path
-    json = create_json(args)
+    json = create_json(options)
     print "Waiting for a receiver to run portal to receive the data"
     fifo = make_fifo('w')
     send_json(fifo, json)
