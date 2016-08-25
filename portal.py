@@ -8,6 +8,7 @@ magic_delimiter = 0x7
 
 # Higher values of debug output more information
 debug = [0]
+verbose = [0]
 version = ["1.0"]
 
 def filename(path):
@@ -151,13 +152,39 @@ def read_json(pipe):
             size = file[path]
             read_json_file(pipe, filename(path), size)
 
+def twoplaces(size):
+    import decimal
+    return decimal.Decimal(str(size)).quantize(decimal.Decimal(10) ** -2)
+
+def nicesize(size):
+    if size < 1024:
+        return "%sB" % twoplaces(size)
+    size /= 1024
+    if size < 1024:
+        return "%sK" % twoplaces(size)
+    size /= 1024
+    if size < 1024:
+        return "%sM" % twoplaces(size)
+    size /= 1024
+    if size < 1024:
+        return "%sG" % twoplaces(size)
+    size /= 1024
+    if size < 1024:
+        return "%sT" % twoplaces(size)
+    return "%sT" % twoplaces(size)
+
 def send_file(fifo, file_data):
     path = file_data.keys()[0]
     size = file_data[path]
     print "Sending %s" % path
     if os.path.isfile(path):
+        import time
         bytes = bytearray(read_file(path))
+        start = time.time()
         send(fifo, bytes)
+        end = time.time()
+        if verbose[0] > 0:
+            print "  sent %s in %fs at %s/s" % (nicesize(size), (end - start), nicesize(size / (end - start)))
 
 
 def send_json(fifo, json_data):
@@ -180,6 +207,7 @@ class Options:
         self.debug = 0
         self.filter_include = []
         self.filter_exclude = []
+        self.verbose = 0
 
 def show_help():
     print "portal %s" % version[0]
@@ -187,6 +215,7 @@ def show_help():
     print "Usage: portal [options] [files/directories ...]"
     print " -h: show help"
     print " -d --debug: Increase debug level"
+    print " -v --verbose: Increase verbose level"
     print " --include <pattern>: Include files that match the given pattern, example *.txt. Multiple --include options can be given"
     print " --exclude <pattern>: Exclude files that match the given pattern. Muliple --exclude options can be given"
 
@@ -200,6 +229,8 @@ def process_args(args):
             continue
         if arg == '-d' or arg == '--debug':
             options.debug += 1
+        elif arg == "-v" or arg == "--verbose":
+            options.verbose += 1
         elif arg == "-h":
             show_help()
             import sys
@@ -219,6 +250,7 @@ def process_args(args):
 import sys
 options = process_args(sys.argv[1:])
 debug[0] = options.debug
+verbose[0] = options.verbose
 args = options.args
 if len(args) >= 1:
     import os.path
