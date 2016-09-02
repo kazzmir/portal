@@ -218,9 +218,16 @@ def show_help():
     print " -v --verbose: Increase verbose level"
     print " --include <pattern>: Include files that match the given pattern, example *.txt. Multiple --include options can be given"
     print " --exclude <pattern>: Exclude files that match the given pattern. Muliple --exclude options can be given"
+    print " -: Read arguments from stdin. echo file1 file2 file3 | portal -"
 
-def process_args(args):
-    options = Options()
+def read_args_from_stdin(options):
+    import sys
+    for line in sys.stdin.readlines():
+        line = line.strip()
+        options = process_args(line.split(' '), options)
+    return options
+
+def process_args(args, options = Options()):
     skip = []
     for arg in args:
         if skip:
@@ -243,6 +250,8 @@ def process_args(args):
             def filter_arg(f):
                 options.filter_exclude.append(f)
             skip.append(filter_arg)
+        elif arg == '-':
+            return read_args_from_stdin(options)
         else:
             options.args.append(arg)
     return options
