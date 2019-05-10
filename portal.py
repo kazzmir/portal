@@ -122,10 +122,11 @@ def read_json_file(pipe, path, size):
             os.makedirs(path)
     else:
         print "Reading file %s size %d" % (path, size)
-        f = open(path, 'w')
-        bytes = pipe.read(size)
-        f.write(bytes)
-        f.close()
+        with open(path, 'w') as f:
+            while size > 0:
+                data = pipe.read(64 * 1024)
+                size -= len(data)
+                f.write(data)
 
 def read_json(pipe):
     print "Reading files from portal"
@@ -179,9 +180,12 @@ def send_file(fifo, file_data):
     print "Sending %s" % path
     if os.path.isfile(path):
         import time
-        bytes = bytearray(read_file(path))
+        # bytes = bytearray(read_file(path))
         start = time.time()
-        send(fifo, bytes)
+        with open(path) as f:
+            for chunk in f:
+                fifo.write(chunk)
+        # send(fifo, bytes)
         end = time.time()
         if verbose[0] > 0:
             print "  sent %s in %fs at %s/s" % (nicesize(size), (end - start), nicesize(size / (end - start)))
