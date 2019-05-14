@@ -124,7 +124,7 @@ def read_json_file(pipe, path, size):
         print "Reading file %s size %d" % (path, size)
         with open(path, 'w') as f:
             while size > 0:
-                data = pipe.read(64 * 1024)
+                data = pipe.read(min(size, 64 * 1024))
                 size -= len(data)
                 f.write(data)
 
