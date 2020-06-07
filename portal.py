@@ -175,6 +175,7 @@ def nicesize(size):
     return "%sT" % twoplaces(size)
 
 def send_file(fifo, file_data):
+    from functools import partial
     path = file_data.keys()[0]
     size = file_data[path]
     print "Sending %s" % path
@@ -183,7 +184,7 @@ def send_file(fifo, file_data):
         # bytes = bytearray(read_file(path))
         start = time.time()
         with open(path) as f:
-            for chunk in f:
+            for chunk in iter(partial(f.read, 65 * 1024), b''):
                 fifo.write(chunk)
         # send(fifo, bytes)
         end = time.time()
